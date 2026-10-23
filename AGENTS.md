@@ -47,8 +47,19 @@ Socket.IO and prints PASS/FAIL for 13 scenarios):
 docker compose -f docker-compose.base44.yml exec web npm run demo
 ```
 
+Single sign-on platform suite (discovery, PKCE, token exchange, refresh-token
+rotation, MFA, tenant isolation, password reset, audit log; prints PASS/FAIL
+for ~75 checks):
+
+```bash
+docker compose -f docker-compose.base44.yml exec web npm run demo:sso
+```
+
 Demo accounts all use password `Comsats@123`
-(e.g. `admin.it`, `dr.ahmed`, `FA23-BCS-050`, `FA22-BEE-031`).
+(e.g. `admin.it`, `dr.ahmed`, `FA23-BCS-050`, `FA22-BEE-031`, `SP23-BBA-019`).
+`npm run demo:sso` restores everything it changes except one library renewal:
+after a few runs the demo loan is at its renewal limit and the suite checks the
+limit instead of the successful renewal. Re-seed to get the renewal path back.
 Reset the data with `docker compose -f docker-compose.base44.yml exec web npm run seed -- --force`
 followed by `docker compose -f docker-compose.base44.yml restart web`
 (the server caches the store in memory).

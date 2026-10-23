@@ -367,6 +367,7 @@ async function updateUser(id, changes) {
         throw new AppError(400, 'You cannot deactivate the last active administrator.', 'LAST_ADMIN');
       }
     }
+    user.active = c.active;
     if (c.active === false) revokeAccess(user.id);
   }
 

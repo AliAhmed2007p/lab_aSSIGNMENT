@@ -14,6 +14,8 @@
  *
  * The script restores what it changes: it removes the two-factor factor and the
  * password it sets during the run, so the demo data stays usable afterwards.
+ * The only lasting change is one loan renewal (see section 7), which is why the
+ * renewal check falls back to the renewal limit once the demo loan is used up.
  */
 
 const crypto = require('crypto');
@@ -35,6 +37,11 @@ function check(label, condition, extra) {
     failed += 1;
     console.log('   \x1b[31mFAIL\x1b[0m  ' + label + (extra ? '  (' + extra + ')' : ''));
   }
+}
+
+// The JSON error code the API answered with, or null when there was none.
+function errorCode(response) {
+  return response.data && response.data.error ? response.data.error.code : null;
 }
 
 function section(title) {
@@ -578,13 +585,24 @@ async function libraryAuthorisation() {
   const overdue = loans.data.loans.find((loan) => loan.overdue);
   if (overdue) {
     const renewOverdue = await call('POST', '/apps/library/api/loans/' + overdue.id + '/renew', { body: {} });
-    check('An overdue loan cannot be renewed', renewOverdue.status === 400);
+    check('An overdue loan cannot be renewed',
+      renewOverdue.status === 400 && errorCode(renewOverdue) === 'LOAN_OVERDUE');
   }
 
+  // Every run consumes one renewal of the demo loan, so a later run finds it at
+  // the limit. The policy is then the thing under test; `npm run seed -- --force`
+  // restores the demo loans and makes the successful renewal available again.
   const renewable = loans.data.loans.find((loan) => !loan.overdue);
   if (renewable) {
+    const limit = session.data.role === 'student' ? 2 : 3;
+    const before = renewable.renewals || 0;
     const renew = await call('POST', '/apps/library/api/loans/' + renewable.id + '/renew', { body: {} });
-    check('A student can renew their own loan', renew.status === 200 && renew.data.loan.renewals >= 1);
+    if (before >= limit) {
+      check('A loan that has used its renewals cannot be renewed again',
+        renew.status === 400 && errorCode(renew) === 'RENEWAL_LIMIT');
+    } else {
+      check('A student can renew their own loan', renew.status === 200 && renew.data.loan.renewals === before + 1);
+    }
   }
 }
 
@@ -605,7 +623,10 @@ async function passwordReset() {
   check('The request is visible to the administrators of the organization',
     resets.status === 200 && resets.data.requests.some((entry) => entry.loginId === MFA_LOGIN_ID));
 
-  const link = await call('POST', '/api/admin/users/' + usmanId + '/reset-link', { body: {} });
+  const link = await call('POST', '/api/admin/users/' + usmanId + '/reset-link', {
+    headers: { Authorization: 'Bearer ' + platformAdminToken },
+    body: {},
+  });
   check('An administrator can hand out a reset link', link.status === 200 && String(link.data.link).includes('/sso/reset?token='));
   const token = new URL(link.data.link).searchParams.get('token');
 
