@@ -147,11 +147,11 @@ A student opening "Create a group" is offered only Society and FYP team. The "Wh
 
 ### Direct message boundary
 
-Muaaz and Usman Raza are both in the read-only Exam Cell Notices group, but they share no open group. A read-only notice board does not make two students contacts, so the server refuses the message and the page shows the reason. The earlier "Hi!" in the same chat was sent before this rule was tightened.
+Muaaz Tasawar and Usman Raza share the read-only Exam Cell Notices group, and sharing that group is what makes them contacts, so the server accepts the message. A student can reach anyone they share a group with, or anyone who has written to them first.
 
-![Direct message blocked because no open group is shared](docs/screenshots/08-dm-blocked-no-open-group.png)
+![Direct message to a student who shares a group](docs/screenshots/08-dm-shared-group.png)
 
-A student with no groups at all is blocked the same way.
+A student who has no groups at all shares nothing with anybody, so the server refuses the message and the page shows the reason.
 
 ![Direct message blocked for a student with no shared group](docs/screenshots/09-dm-blocked-stranger.png)
 
@@ -179,9 +179,9 @@ The member list shows the group owner, admins, and muted members, with Mute, Unm
 
 ### Deactivating a user
 
-Deactivation asks for confirmation. The user is signed out right away and cannot sign in again until reactivated.
+The Deactivate button asks for a confirmation first. Once it is confirmed the user is signed out right away, the row turns **Deactivated** and the button becomes **Activate**; they cannot sign in again until an admin reactivates them.
 
-![Deactivate confirmation](docs/screenshots/14-admin-deactivate-confirm.png)
+![A deactivated user in the admin console](docs/screenshots/14-admin-deactivate-confirm.png)
 
 ### Creating a group as an admin
 
