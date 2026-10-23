@@ -354,6 +354,7 @@
         },
         el('span', { text: account.name }),
         el('small', { text: account.loginId + ', ' + account.note })
+        )
       )
     );
   }

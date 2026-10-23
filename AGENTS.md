@@ -66,6 +66,10 @@ followed by `docker compose -f docker-compose.base44.yml restart web`
 
 ## Gotchas
 
+- Every browser page is a plain static file, so a JavaScript syntax error kills
+  the page silently — no server-side error, the form and the provider buttons
+  just never appear (`public/js/sso-login.js` had one). `node --check
+  public/js/*.js` catches it before the browser does.
 - `nodemon` is started with `--ignore server/data`: the batched JSON writes
   would otherwise restart the server on every message.
 - `server/data/db.json` lives in the bind mount, so seeded demo data and any

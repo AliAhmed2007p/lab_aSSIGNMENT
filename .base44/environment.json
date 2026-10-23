@@ -2,5 +2,32 @@
   "previewPort": 3000,
   "healthPath": "/api/health",
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
-  "secrets": []
+  "secrets": [
+    {
+      "name": "JWT_SECRET",
+      "description": "Signs SSO session cookies and single-use tickets. Generated for development; replace it for a real deployment.",
+      "requiredAtBoot": true,
+      "generatedForDevelopment": true
+    },
+    {
+      "name": "GOOGLE_CLIENT_ID",
+      "description": "Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client ID (Web application). Needed for Google sign-in; without it the Google button stays disabled.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GOOGLE_CLIENT_SECRET",
+      "description": "Client secret of the same Google OAuth 2.0 client (starts with GOCSPX-).",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "FACEBOOK_APP_ID",
+      "description": "Meta for Developers -> your app -> App settings -> Basic -> App ID. Needed for Facebook sign-in.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "FACEBOOK_APP_SECRET",
+      "description": "Meta for Developers -> your app -> App settings -> Basic -> App secret (click Show).",
+      "requiredAtBoot": false
+    }
+  ]
 }
