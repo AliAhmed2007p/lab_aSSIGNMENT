@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Library portal - COMSATS</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/sso.css">
+</head>
+<body class="admin-body">
+
+  <header class="admin-top">
+    <div class="admin-brand">
+      <h1>Library portal</h1>
+      <span id="lib-me">Sample application 2</span>
+    </div>
+    <div class="admin-links">
+      <a class="btn btn-quiet btn-small" href="/index.html">Home</a>
+      <a class="btn btn-quiet btn-small" href="/chat.html">Chat</a>
+      <button type="button" class="btn btn-quiet btn-small" id="lib-signout" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <main class="account-main">
+    <div id="lib-error" class="form-error" role="alert" hidden></div>
+
+    <section class="card" id="lib-signin" hidden>
+      <h3>You are not signed in</h3>
+      <p class="sub">
+        This application asks the single sign-on platform who you are. Nothing about your
+        password is handled here.
+      </p>
+      <a class="btn" href="/apps/library/login">Sign in with SSO</a>
+    </section>
+
+    <section id="lib-content" hidden>
+      <div class="lib-head">
+        <div>
+          <h3 id="lib-title">Borrowed items</h3>
+          <p class="sub" id="lib-sub"></p>
+        </div>
+        <span class="badge" id="lib-role"></span>
+      </div>
+
+      <div class="lib-cards" style="margin:14px 0">
+        <div class="stat"><b id="stat-visible">0</b><span id="stat-visible-label">items you can see</span></div>
+        <div class="stat"><b id="stat-overdue">0</b><span>overdue</span></div>
+        <div class="stat"><b id="stat-mine">0</b><span>yours</span></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col" id="col-student">Borrower</th>
+              <th scope="col">Due</th>
+              <th scope="col">Renewals</th>
+              <th scope="col">State</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="loan-rows"></tbody>
+        </table>
+      </div>
+
+      <p class="hint" style="margin-top:12px">
+        This page reads <code>/apps/library/api/loans</code> with the session this application
+        received from the SSO platform. The granted scopes are
+        <code id="lib-scopes"></code>.
+      </p>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/library.js"></script>
+</body>
+</html>

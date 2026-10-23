@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reset password - COMSATS Single Sign-On</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/sso.css">
+</head>
+<body class="login-page">
+
+  <section class="login-intro">
+    <div>
+      <h1>Reset your password</h1>
+      <p class="lede">
+        Choose a new password. Every session and refresh token of the account is revoked at the
+        same moment, so anyone who was signed in has to sign in again.
+      </p>
+    </div>
+  </section>
+
+  <main class="login-panel">
+    <h2>New password</h2>
+    <p class="sub">The link is valid for 30 minutes and can only be used once.</p>
+
+    <div id="form-error" class="form-error" role="alert" hidden></div>
+
+    <form id="reset-form" novalidate>
+      <div class="field">
+        <label for="password">New password</label>
+        <input class="input" id="password" type="password" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label for="password2">Repeat password</label>
+        <input class="input" id="password2" type="password" autocomplete="new-password" required>
+      </div>
+      <button class="btn" id="reset-button" type="submit">Set new password</button>
+    </form>
+
+    <p class="sub" id="done" hidden>
+      Password changed. <a href="/index.html">Sign in</a> with the new password.
+    </p>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/sso-reset.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My account - COMSATS Single Sign-On</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/sso.css">
+</head>
+<body class="admin-body">
+
+  <header class="admin-top">
+    <div class="admin-brand">
+      <h1>My account</h1>
+      <span id="account-me">COMSATS Single Sign-On</span>
+    </div>
+    <div class="admin-links">
+      <a class="btn btn-quiet btn-small" href="/index.html">Home</a>
+      <button type="button" class="btn btn-quiet btn-small" id="signout-btn">Sign out everywhere</button>
+    </div>
+  </header>
+
+  <main class="account-main">
+    <div id="page-error" class="form-error" role="alert" hidden></div>
+
+    <section class="account-grid">
+      <div class="card">
+        <h3>Profile</h3>
+        <dl class="kv" id="profile"></dl>
+      </div>
+
+      <div class="card">
+        <h3>Two-step verification</h3>
+        <p class="sub" id="mfa-status"></p>
+        <div id="mfa-actions" class="row"></div>
+
+        <form id="mfa-enroll-form" hidden novalidate>
+          <div class="secret-box">
+            <code id="mfa-secret">...</code>
+            <button type="button" class="btn btn-quiet btn-small" id="mfa-copy">Copy secret</button>
+            <a class="btn btn-quiet btn-small" id="mfa-otpauth" href="#">Open link</a>
+          </div>
+          <p class="otpauth" id="mfa-uri"></p>
+          <label for="mfa-confirm">Code from your authenticator</label>
+          <input class="input code-input" id="mfa-confirm" inputmode="numeric" maxlength="6">
+          <button type="button" class="btn" id="mfa-confirm-btn" style="margin-top:10px">Turn on</button>
+        </form>
+
+        <form id="mfa-disable-form" hidden novalidate>
+          <label for="mfa-password">Confirm with your password</label>
+          <input class="input" id="mfa-password" type="password" autocomplete="current-password">
+          <button type="button" class="btn btn-danger" id="mfa-disable-btn" style="margin-top:10px">Turn off</button>
+        </form>
+
+        <div id="mfa-codes" hidden>
+          <p class="sub">New recovery codes (each code works once):</p>
+          <div class="recovery-codes" id="mfa-codes-box"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Change password</h3>
+        <form id="password-form" novalidate>
+          <label for="pw-current">Current password</label>
+          <input class="input" id="pw-current" type="password" autocomplete="current-password">
+          <label for="pw-new">New password</label>
+          <input class="input" id="pw-new" type="password" autocomplete="new-password">
+          <p class="hint" id="pw-policy"></p>
+          <button class="btn" id="pw-button" type="submit">Change password</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Linked sign-in providers</h3>
+        <p class="sub">Linking a provider lets you sign in to this account with it.</p>
+        <div id="social-list"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Sessions</h3>
+      <p class="sub">Every browser that is signed in to the platform. Revoking one signs that browser out.</p>
+      <div class="table-wrap">
+        <table class="table sessions-table">
+          <thead>
+            <tr>
+              <th scope="col">Signed in</th>
+              <th scope="col">Last seen</th>
+              <th scope="col">Factors</th>
+              <th scope="col">Client</th>
+              <th scope="col">State</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="session-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/sso-account.js"></script>
+</body>
+</html>
