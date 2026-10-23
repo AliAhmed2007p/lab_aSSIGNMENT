@@ -5,8 +5,13 @@
 A single Node.js process: Express REST API + Socket.IO, serving the static
 client from `public/` on the same origin. There is **no database server** —
 data is a JSON file at `server/data/db.json` (gitignored, created on first
-write). No external services or credentials are required; the only secret is
-`JWT_SECRET` for signing session tokens.
+write). No external services or credentials are required: the token-signing RSA
+key pair is generated on first start into `server/data/keys.json` (gitignored),
+and the Google/Facebook buttons stay disabled until their credentials exist.
+
+The same process is also the OAuth 2.0 / OpenID Connect **identity provider**,
+with two sample client applications (`/apps/chat/login`, `/apps/library/login`)
+and the chat behind sample application 1.
 
 ## Running it here (sandbox)
 
@@ -74,7 +79,17 @@ followed by `docker compose -f docker-compose.base44.yml restart web`
   would otherwise restart the server on every message.
 - `server/data/db.json` lives in the bind mount, so seeded demo data and any
   records created in the preview survive restarts — and are never committed.
-- `JWT_SECRET` is delivered by the platform at `/run/base44/app.env`; when it
-  is missing the app prints a warning and uses a built-in development secret.
+- The three bundled applications get their callback URLs re-pointed at the
+  current `PUBLIC_BASE_URL` on every start (`server/services/clientAppSync.js`),
+  so a rotated preview host does not break their sign-in with `BAD_REDIRECT_URI`.
+- Documentation screenshots live in `docs/screenshots/` and are referenced by
+  `README.md` and `docs/SSO-SETUP.md`. They are captured from the running app
+  with headless Chromium on the compose network, e.g.
+  `docker run --rm --entrypoint node --network comsats-connect_default
+  -v /tmp/sc:/tmp/sc -e NODE_PATH=/usr/src/app/node_modules
+  -e SHOT_BASE=http://web:3000 zenika/alpine-chrome:with-puppeteer
+  /tmp/sc/login-shot.js`. Keep a one-off capture script in `/tmp`, never in the
+  repo; a capture that signs in writes sessions and audit rows into the store,
+  so re-seed afterwards.
 - The app is same-origin only: no CORS or host/origin allowlist configuration
   is needed behind the preview proxy.

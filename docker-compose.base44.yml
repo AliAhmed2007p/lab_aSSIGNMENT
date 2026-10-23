@@ -53,7 +53,8 @@ services:
         condition: service_completed_successfully
     ports:
       - "3000:3000"
-    # Platform-managed secrets (JWT_SECRET). Listed last so real values win.
+    # Platform-managed secrets (the Google and Facebook credentials). Listed
+    # last so a value set in the dashboard always wins.
     env_file:
       - /run/base44/app.env
     # nodemon restarts on source edits. server/data is ignored so writing the

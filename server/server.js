@@ -40,6 +40,7 @@ const chatApp = require('./apps/chatApp');
 const libraryApp = require('./apps/libraryApp');
 const { attachSockets } = require('./sockets');
 const ssoService = require('./services/ssoService');
+const { syncBundledAppRedirects } = require('./services/clientAppSync');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -124,6 +125,13 @@ app.use(errorHandler);
 function start() {
   // Expired codes, sessions and tokens are cleaned up on every boot.
   ssoService.purgeExpired();
+
+  // The address this deployment is served from can change (the preview host
+  // rotates); point the bundled sample applications at the current one.
+  const resynced = syncBundledAppRedirects();
+  if (resynced.length) {
+    console.log('Redirect URIs refreshed for: ' + resynced.join(', '));
+  }
 
   server.listen(SERVER.PORT, () => {
     console.log('COMSATS Connect API running on http://localhost:' + SERVER.PORT);
