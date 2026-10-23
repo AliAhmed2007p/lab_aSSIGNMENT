@@ -4,12 +4,6 @@
   "startCommand": "docker compose -f docker-compose.base44.yml up -d",
   "secrets": [
     {
-      "name": "JWT_SECRET",
-      "description": "Signs SSO session cookies and single-use tickets. Generated for development; replace it for a real deployment.",
-      "requiredAtBoot": true,
-      "generatedForDevelopment": true
-    },
-    {
       "name": "GOOGLE_CLIENT_ID",
       "description": "Google Cloud Console -> APIs & Services -> Credentials -> OAuth 2.0 Client ID (Web application). Needed for Google sign-in; without it the Google button stays disabled.",
       "requiredAtBoot": false

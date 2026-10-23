@@ -12,7 +12,7 @@
 1. [Overview](#1-overview)
 2. [Features](#2-features)
 3. [Screenshots](#3-screenshots)
-4. [Single sign-on platform](#5-single-sign-on-platform)
+4. [Single sign-on platform](#4-single-sign-on-platform)
 5. [Tech Stack](#5-tech-stack)
 6. [How This Meets the Assignment](#6-how-this-meets-the-assignment)
 7. [Roles and Communication Rules](#7-roles-and-communication-rules)
@@ -93,15 +93,19 @@ There is also an automated demo script (`tests/demo.js`) that connects several u
 
 - Data survives restarts using a human-readable JSON file, with no database install.
 
+**Single sign-on**
+
+The repository also carries a **multi-tenant single sign-on platform** (OAuth 2.0 and OpenID Connect) that both the chat application and a campus library portal sign their users in through. It owns the user directory, the organizations, the security policies and the audit log; see [Single sign-on platform](#4-single-sign-on-platform).
+
 ---
 
 ## 3. Screenshots
 
-All screenshots are taken from the running application with the demo data from [Demo Accounts and Seed Data](#13-demo-accounts-and-seed-data).
+All screenshots are taken from the running application with the demo data from [Demo Accounts and Seed Data](#13-demo-accounts-and-seed-data). Screenshots 1 to 15 are the chat application (sample application 1) after signing in through the platform; the platform's own pages - the landing page, the central sign-in page, the account page, the admin console and the library portal - are in [Single sign-on platform](#4-single-sign-on-platform).
 
 ### Sign in
 
-The left panel states the three boundary rules. The demo account buttons fill in the form with one click.
+The chat application sends the browser to the platform's central sign-in page, which names the application, lists the scopes it is asking for and states the platform rules. Every demo account is one click, which fills in the form.
 
 ![Sign-in page](docs/screenshots/01-login.png)
 
@@ -326,7 +330,7 @@ Registering a third application is an admin-console operation: **Applications �
 ### Where to read more
 
 - [Single sign-on setup](docs/SSO-SETUP.md) — running it, the demo walkthrough, Google and Facebook credentials, how each requirement maps to the code, registering a third application and the security notes.
-- [REST API reference](#17-rest-api-reference) — the SSO and administration endpoints.
+- [REST API reference](#16-rest-api-reference) — the SSO and administration endpoints.
 - The landing page at `/` links to the discovery document, the JWKS and the admin console.
 
 ---
@@ -368,7 +372,8 @@ Registering a third application is an admin-console operation: **Applications �
 
 | Role | Typical account | Login ID format |
 |------|-----------------|-----------------|
-| `admin` | IT office, Exam Cell, Admissions | Username, for example `exam.cell` |
+| `admin` | IT office that manages the whole platform | Username, for example `admin.it` |
+| `tenant_admin` | An office that administers its own organization only | Username, for example `exam.cell`, `admin.lhr` |
 | `faculty` | Teachers and supervisors | Username, for example `dr.ahmed` |
 | `student` | Registered students | Registration number, for example `FA23-BCS-050` |
 
@@ -398,6 +403,7 @@ In every case the user must also be a **member** and must **not be muted**.
 | Role | Allowed types | Allowed posting policies |
 |------|---------------|--------------------------|
 | admin | All six types | everyone, faculty_only, admin_only |
+| tenant_admin | All six types | everyone, faculty_only, admin_only |
 | faculty | course, fyp | everyone, faculty_only |
 | student | society, fyp | everyone |
 
@@ -420,6 +426,7 @@ Extra protections: the owner cannot be removed or muted (delete the group instea
 | Sender role | Who they may message |
 |-------------|----------------------|
 | admin | Anyone |
+| tenant_admin | Anyone |
 | faculty | Anyone |
 | student | Only people who share at least one **open group** (posting policy `everyone`) with them, or who have already messaged them first |
 
@@ -515,11 +522,15 @@ The server serves the `public` folder, so the whole interface is available at **
 
 | URL | File | Who | Purpose |
 |-----|------|-----|---------|
-| `/` or `/index.html` | `public/index.html` | Everyone | Sign in, with one-click demo accounts |
-| `/chat.html` | `public/chat.html` | Signed-in users | Group and direct messaging |
-| `/admin.html` | `public/admin.html` | Admins only | User and group management. Other roles are sent back to the chat page |
+| `/` | `public/index.html` | Everyone | Landing page: what the platform is, the two sample applications, the demo accounts and the platform endpoints |
+| `/sso/login` | `public/sso-login.html` | Everyone | The central sign-in page an application sends the browser to (password, second factor, enrollment, registration, password reset) |
+| `/sso/account` | `public/sso-account.html` | Signed-in users | Profile, two-step verification, password change, linked providers and active sessions |
+| `/sso/reset` | `public/sso-reset.html` | Everyone with a reset link | Sets a new password |
+| `/chat.html`, `/apps/chat/` | `public/chat.html` | Signed-in users | Group and direct messaging, reached through single sign-on |
+| `/apps/library/` | `public/apps/library/index.html` | Library users | Sample application 2: borrowed items, due dates and renewals |
+| `/admin.html` | `public/admin.html` | Admins and organization admins only | Users, groups, organizations, applications and the audit log. Other roles are sent back to the chat page |
 
-A direct link to a conversation works: `chat.html#g:<groupId>` opens a group and `chat.html#d:<userId>` opens a direct message.
+A direct link to a conversation works: `chat.html#g:<groupId>` opens a group and `chat.html#d:<userId>` opens a direct message. A visitor with no session is sent to `/apps/chat/login`, which starts the single sign-on flow.
 
 ### Chat page
 
@@ -539,19 +550,30 @@ A direct link to a conversation works: `chat.html#g:<groupId>` opens a group and
 
 | Tab | What it does |
 |-----|--------------|
-| Users | Search and filter by role and department, add a user, edit name and department, reset a password, deactivate or reactivate an account |
+| Users | Search and filter by role, department and status, add a user, edit name and department, reset a password, issue a password-reset link, deactivate or reactivate an account |
 | Groups | Search and filter by type and posting policy, create any group, and open Manage to edit settings, add, mute or remove members, and delete the group |
+| Organizations | Edit each organization's security policy: two-factor requirement, self-registration, password rules, token lifetimes, social providers |
+| Applications | Register client applications with their redirect URIs and scopes, and rotate a client secret |
+| Audit log | Every authentication and administration event, with failed sign-in monitoring |
+
+The last three tabs belong to the platform and are described in [Single sign-on platform](#4-single-sign-on-platform).
 
 ### How the frontend works
 
 | File | Responsibility |
 |------|----------------|
 | `public/js/api.js` | Session storage, REST calls with the token, socket connection and acknowledgement helper, small DOM helpers, labels |
-| `public/js/login.js` | Sign-in form, demo account buttons, resume of an existing session |
+| `public/js/landing.js` | Landing page: the demo-account list |
+| `public/js/sso-login.js` | The central sign-in page: password step, second factor, enrollment, registration, password reset, demo-account chips |
+| `public/js/sso-account.js` | Account page: profile, password change, two-step verification, linked providers, sessions |
+| `public/js/sso-reset.js` | The password-reset page |
 | `public/js/chat.js` | Socket connection, group and conversation lists, messages, composer, typing, unread counts, reconnect sync |
 | `public/js/chat-panels.js` | Members panel and the create group, new direct message and edit group dialogs |
 | `public/js/admin.js` | Admin console tabs, user and group management |
-| `public/css/styles.css` | Shared styles and the login page |
+| `public/js/admin-sso.js` | The organizations, applications and audit-log tabs |
+| `public/js/library.js` | The library portal: loans and renewals |
+| `public/css/styles.css` | Shared styles |
+| `public/css/sso.css` | Landing, sign-in, account and reset pages |
 | `public/css/chat.css` | Chat page layout |
 | `public/css/admin.css` | Admin console layout |
 
@@ -570,48 +592,82 @@ Design notes:
 comsats-connect/
 ├── server/
 │   ├── config/
-│   │   └── policies.js            Roles, group types, rules, limits, event names
+│   │   └── policies.js            Roles, group types, rules, limits, SSO settings
 │   ├── data/
-│   │   └── .gitkeep               Keeps the folder in Git (db.json is generated)
+│   │   └── .gitkeep               Keeps the folder in Git (db.json and keys.json are generated)
+│   ├── security/
+│   │   ├── passwords.js           Hashing, strength policy, recovery codes
+│   │   ├── tokens.js              RS256 signing keys, JWTs, PKCE helpers
+│   │   ├── cookies.js             Session cookie helpers
+│   │   └── totp.js                TOTP second factor
 │   ├── store/
 │   │   └── db.js                  JSON file store, AppError, history paging
 │   ├── services/
-│   │   ├── userService.js         Users, login, direct message storage
+│   │   ├── userService.js         Users, login, passwords, password reset, direct messages
 │   │   ├── groupService.js        Groups, membership, muting, group messages
-│   │   └── permissionService.js   Every communication rule lives here
+│   │   ├── permissionService.js   Every communication rule lives here
+│   │   ├── tenantService.js       Organizations and their security policies
+│   │   ├── ssoService.js          Sessions, authorization codes, tokens, revocation
+│   │   ├── mfaService.js          Second-factor enrollment and verification
+│   │   ├── socialService.js       Google and Facebook sign-in
+│   │   ├── clientAppService.js    Registered applications and their client secrets
+│   │   ├── clientAppSync.js       Keeps the bundled applications' callbacks on PUBLIC_BASE_URL
+│   │   └── auditService.js        Audit log and failed sign-in monitoring
+│   ├── apps/
+│   │   ├── oauthClient.js         Authorization-code + PKCE client used by both sample apps
+│   │   ├── chatApp.js             Sample application 1: login, callback, session, logout
+│   │   └── libraryApp.js          Sample application 2: login, callback, loans, renewals
 │   ├── middleware/
-│   │   ├── auth.js                JWT signing and verification, role guard
+│   │   ├── auth.js                Access-token verification, role and tenant guard
 │   │   └── errorHandler.js        Uniform JSON errors, async wrapper, 404
 │   ├── routes/
-│   │   ├── authRoutes.js          Login and current user
+│   │   ├── authRoutes.js          First-party login and current user
 │   │   ├── userRoutes.js          User listing, creation, updates, DM history
-│   │   └── groupRoutes.js         Groups, members, muting, history
+│   │   ├── groupRoutes.js         Groups, members, muting, history
+│   │   ├── adminRoutes.js         Organizations, applications, users, audit (/api/admin)
+│   │   └── ssoRoutes.js           The platform's own endpoints (/sso/*, /.well-known)
 │   ├── sockets/
 │   │   ├── rateLimiter.js         Sliding-window limiter, one per socket
 │   │   └── index.js               Socket.IO server, rooms, events
-│   ├── seed.js                    Loads demo users, groups and messages
+│   ├── seed.js                    Loads the demo organizations, users, groups, applications and loans
 │   └── server.js                  Express and Socket.IO entry point, serves public/
 ├── public/
+│   ├── apps/
+│   │   └── library/
+│   │       └── index.html         Library portal (sample application 2)
 │   ├── css/
-│   │   ├── styles.css             Shared styles and login page
+│   │   ├── styles.css             Shared styles
+│   │   ├── sso.css                Landing, sign-in, account and reset pages
 │   │   ├── chat.css               Chat page layout
 │   │   └── admin.css              Admin console layout
 │   ├── js/
 │   │   ├── api.js                 Session, REST, socket helpers, DOM helpers
-│   │   ├── login.js               Sign-in page logic
+│   │   ├── landing.js             Landing page logic
+│   │   ├── sso-login.js           Central sign-in page logic
+│   │   ├── sso-account.js         Account page logic
+│   │   ├── sso-reset.js           Password-reset page logic
 │   │   ├── chat.js                Chat page logic
 │   │   ├── chat-panels.js         Members panel and chat dialogs
-│   │   └── admin.js               Admin console logic
-│   ├── index.html                 Sign in
+│   │   ├── admin.js               Admin console logic
+│   │   ├── admin-sso.js           Organizations, applications and audit-log tabs
+│   │   └── library.js             Library portal logic
+│   ├── index.html                 Landing page
+│   ├── sso-login.html             Central sign-in page
+│   ├── sso-account.html           Account page
+│   ├── sso-reset.html             Password-reset page
 │   ├── chat.html                  Chat page
 │   └── admin.html                 Admin console
 ├── docs/
+│   ├── SSO-SETUP.md               Running the platform, credentials, requirement map
 │   └── screenshots/               Images used in this README
 ├── tests/
-│   └── demo.js                    Multi-user boundary demonstration
+│   ├── demo.js                    Multi-user boundary demonstration
+│   └── sso.js                     End-to-end check of the single sign-on platform
 ├── .env.example                   Template for your .env
 ├── .gitignore
+├── docker-compose.base44.yml      Base44 sandbox environment (see AGENTS.md)
 ├── package.json
+├── AGENTS.md                      Working notes for automated agents
 └── README.md
 ```
 
@@ -657,13 +713,9 @@ You may see a few npm audit warnings from development packages. Do not run `npm 
 Copy-Item .env.example .env
 ```
 
-Open `.env` and replace the `JWT_SECRET` value with a long random string of your own. You can generate one with:
+Nothing in the file has to be filled in to run the demo. The platform generates its RSA signing key pair on first start (`server/data/keys.json`, gitignored), and every demo account uses the shared demo password. Add Google or Facebook credentials only if you want social sign-in - without them those buttons stay disabled.
 
-```powershell
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
-All variables are explained in [Environment Variables](#12-environment-variables). The defaults work as they are, except for the secret.
+All variables are explained in [Environment Variables](#12-environment-variables).
 
 ### Step 4: Load the demo data
 
@@ -671,7 +723,7 @@ All variables are explained in [Environment Variables](#12-environment-variables
 npm run seed
 ```
 
-You should see `Seed complete`, along with 12 users, 6 groups and a list of demo logins. This creates `server/data/db.json`.
+You should see `Seed complete`, along with 2 organizations, 16 users, 7 groups, 3 registered applications and a list of demo logins. This creates `server/data/db.json`.
 
 ### Step 5: Start the server
 
@@ -696,7 +748,7 @@ Leave this window open. The server must be running for everything below.
 
 ### Step 6: Open the web app
 
-Go to **http://localhost:3000** in your browser and click one of the demo accounts. Student, faculty and admin accounts each see a different set of groups. Admin accounts also see an "Admin console" link under their name.
+Go to **http://localhost:3000** in your browser. The landing page describes the platform and offers both sample applications; **Sign in with SSO** on the COMSATS Connect card leads to the central sign-in page, where each demo account is one click. Student, faculty and admin accounts each see a different set of groups. Admin accounts also see an "Admin console" link under their name.
 
 If port 3000 is busy, start the server on another port and open that address instead:
 
@@ -735,29 +787,46 @@ See [Running the Automated Demo](#15-running-the-automated-demo).
 | `npm run seed -- --force` | Wipes the database and loads demo data again |
 | `npm run demo` | Runs the boundary demo (server must be running) |
 | `npm test` | Same as `npm run demo` |
+| `npm run demo:sso` | Runs the single sign-on suite (server must be running) |
 
 ---
 
 ## 12. Environment Variables
 
-Set in `.env` (copied from `.env.example`).
+Set in `.env` (copied from `.env.example`). Nothing is required to run the project: the social sign-in providers stay disabled until their credentials are present.
+
+**Server and chat limits**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Address the browser uses to reach the server. It builds the OAuth redirect URIs and the issuer claim, so it must match what you open in the browser |
 | `PORT` | `3000` | Port the server listens on |
-| `JWT_SECRET` | *(insecure dev fallback)* | Secret used to sign tokens. **Change this.** If missing, the server prints a warning and uses a development-only secret |
-| `JWT_EXPIRES_IN` | `8h` | Token lifetime, for example `1h`, `8h`, `7d` |
-| `CLIENT_ORIGIN` | `*` | Allowed browser origins. Use `*` for any, or a comma-separated list such as `http://localhost:5173,https://app.example.com` |
+| `CLIENT_ORIGIN` | `*` | Allowed browser origins for the chat API. Use `*` for any, or a comma-separated list such as `http://localhost:5173,https://app.example.com` |
 | `MESSAGE_MAX_LENGTH` | `2000` | Maximum characters in one message |
 | `RATE_LIMIT_MESSAGES` | `10` | Messages allowed per window, per socket |
 | `RATE_LIMIT_WINDOW_MS` | `10000` | Length of the rate-limit window in milliseconds |
 | `HISTORY_LIMIT` | `50` | Default number of messages returned for history (maximum 200) |
 
-The demo can also use an optional `BASE_URL` environment variable (default `http://localhost:3000`) if your server runs elsewhere:
+**Single sign-on platform**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SSO_ISSUER` | `PUBLIC_BASE_URL` | Issuer identifier used in the discovery document and the `iss` claim |
+| `SSO_PRIVATE_KEY_PEM` | *(generated)* | Sign the tokens with your own RSA private key instead of the pair generated at `server/data/keys.json` |
+| `SSO_KEY_ID` | `env-key` | Key id published in the JWKS when `SSO_PRIVATE_KEY_PEM` is set |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | *(empty)* | Google sign-in. The button stays disabled until both are set *and* the provider is switched on for the organization |
+| `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | *(empty)* | Facebook sign-in, same rule |
+| `CHAT_CLIENT_ID`, `CHAT_CLIENT_SECRET` | `comsats-connect-chat`, `dev-chat-client-secret` | Client credentials of sample application 1 (the chat) |
+| `LIBRARY_CLIENT_ID`, `LIBRARY_CLIENT_SECRET` | `comsats-library-portal`, `dev-library-client-secret` | Client credentials of sample application 2 (the library portal) |
+| `LAHORE_CLIENT_ID`, `LAHORE_CLIENT_SECRET` | `comsats-lahore-portal`, `dev-lahore-client-secret` | Client credentials of the Lahore campus portal |
+
+The automated scripts read three optional variables of their own: `BASE_URL` (default `http://localhost:3000`) when the server runs elsewhere, `DEMO_PASSWORD` (default `Comsats@123`), and `NO_COLOR=1` turns off coloured output.
 
 ```powershell
 $env:BASE_URL = 'http://localhost:4000'; npm run demo
 ```
+
+A hosted deployment does not read a `.env` file: the same variables are stored as app secrets and delivered to the running server at `/run/base44/app.env`, which the `web` service in `docker-compose.base44.yml` mounts as its last `env_file` so a value set in the dashboard always wins. Nothing is committed and the service is recreated when a credential changes.
 
 ---
 
@@ -770,7 +839,7 @@ $env:BASE_URL = 'http://localhost:4000'; npm run demo
 | Login ID | Name | Role | Department |
 |----------|------|------|------------|
 | `admin.it` | IT Administrator | admin | Administration |
-| `exam.cell` | Exam Cell Office | admin | Administration |
+| `exam.cell` | Exam Cell Office | tenant_admin | Administration |
 | `dr.ahmed` | Dr. Ahmed Raza | faculty | Computer Science |
 | `dr.sana` | Dr. Sana Malik | faculty | Computer Science |
 | `dr.bilal` | Dr. Bilal Hussain | faculty | Management Sciences |
@@ -782,7 +851,7 @@ $env:BASE_URL = 'http://localhost:4000'; npm run demo
 | `FA22-BEE-031` | Fatima Noor | student | Electrical and Computer Engineering |
 | `SP23-BBA-019` | Usman Raza | student | Management Sciences |
 
-The login page also lists five of these as one-click buttons: `admin.it`, `exam.cell`, `dr.ahmed`, `FA23-BCS-050` and `FA22-BEE-031`.
+The central sign-in page offers five of these as one-click demo buttons: `admin.it`, `exam.cell`, `dr.ahmed`, `FA23-BCS-050` and `FA22-BEE-031`. The Lahore organization has four accounts of its own (`admin.lhr`, `dr.kamran`, `FA23-BCS-101`, `FA23-BCS-102`); see [Single sign-on platform](#4-single-sign-on-platform).
 
 ### Groups
 
@@ -794,6 +863,7 @@ The login page also lists five of these as one-click buttons: `admin.it`, `exam.
 | Exam Cell Notices | office | admin_only | exam.cell | admin.it, all faculty, all students |
 | ACM Student Chapter | society | everyone | Muaaz | Ayesha, Hamza (**muted**), Fatima |
 | Venturify FYP Team | fyp | everyone | Muaaz | Abbas Raza, Amna Bibi, Ayesha, dr.sana |
+| BCS-9A (Lahore campus) | class | everyone | admin.lhr | dr.kamran, Ali Hassan, Sara Iqbal |
 
 A few starting messages are also loaded so history is not empty.
 
@@ -813,7 +883,7 @@ Start from a fresh seed (`npm run seed -- --force`, then `npm start`). Open seve
 
 | Step | Do this | You should see |
 |------|---------|----------------|
-| 1 | Open the login page | The three boundary rules and the demo accounts (screenshot 1) |
+| 1 | Open the landing page, then **Sign in with SSO** on the COMSATS Connect card | The central sign-in page names the application and its scopes, with one-click demo accounts (screenshot 1) |
 | 2 | Tab A: sign in as Muaaz. Tab B: sign in as `dr.ahmed` | Each person sees only their own groups, sorted by type (screenshots 2 and 4) |
 | 3 | Tab B: post in the CSC334 group while Tab A has it open | The message appears in Tab A at once. While Tab B types, Tab A shows "Dr. Ahmed Raza is typing..." |
 | 4 | Tab A: open CS Department Announcements | A locked bar: "Read-only. Only faculty and admins can post in this group." (screenshot 3) |
@@ -865,12 +935,20 @@ The demo prepares its own starting state (for example it makes sure Fatima is no
 
 The demo exits with code 0 when every check passes, and 1 otherwise. Set `NO_COLOR=1` to turn off colored output.
 
+### The single sign-on suite
+
+`tests/sso.js` (`npm run demo:sso`) is the same idea for the platform: it checks the discovery document and JWKS, the authorization-code flow with PKCE, the token exchange, refresh-token rotation and replay detection, second-factor enrollment and verification, tenant isolation, password reset and the audit log, printing `PASS` or `FAIL` for about 75 checks. It restores everything it changes except one library renewal: after a few runs that demo loan is at its renewal limit, so the suite checks the limit instead of a successful renewal. Re-seed to get the renewal path back.
+
+```bash
+npm run demo:sso
+```
+
 ---
 
 ## 16. REST API Reference
 
 Base URL: `http://localhost:3000`
-All endpoints except `/api/health`, `/api/meta` and `/api/auth/login` need the header `Authorization: Bearer <token>`.
+All chat endpoints except `/api/health`, `/api/meta` and `/api/auth/login` need the header `Authorization: Bearer <token>`. The single sign-on endpoints at the end of this section are the exception: they identify the caller with the platform session cookie, and the administration endpoints need an administrator's bearer token.
 
 All errors use one format:
 
@@ -883,13 +961,13 @@ All errors use one format:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Server status |
-| GET | `/api/meta` | Roles, group types, policies, creation rules, departments, message limit |
+| GET | `/api/meta` | Roles, group types, policies, creation rules, departments, message limit, and the platform endpoints (issuer, authorize, token, userinfo, discovery, JWKS, scopes, social providers) |
 
 ### Authentication
 
 | Method | Path | Body | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/login` | `{ loginId, password }` | Returns `{ token, user }` |
+| POST | `/api/auth/login` | `{ loginId, password }` | Returns `{ token, expiresIn, refreshToken, tokenType, user, tenant }`, or `401` with an MFA ticket for an account that has a second factor |
 | GET | `/api/auth/me` | none | Returns the current user |
 
 ### Users
@@ -937,6 +1015,68 @@ Content-Type: application/json
   "memberIds": ["usr_ab12cd34ef56"]
 }
 ```
+
+### Single sign-on and administration
+
+These endpoints belong to the platform rather than to the chat.
+
+**OAuth 2.0 / OpenID Connect**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/.well-known/openid-configuration` | Discovery document (also served at `/sso/.well-known/openid-configuration`) |
+| GET | `/sso/jwks.json` | The public signing keys |
+| GET | `/sso/authorize` | Authorization endpoint. Query: `response_type`, `client_id`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge`, `code_challenge_method` |
+| POST | `/sso/token` | Token endpoint: the `authorization_code`, `refresh_token` and `revocation` grants |
+| GET, POST | `/sso/userinfo` | Claims of the access token |
+| POST | `/sso/revoke` | Revokes an access or refresh token |
+| GET | `/sso/end-session` | Single sign-out; ends the platform session |
+| GET | `/sso/social/:provider/start` | Starts Google or Facebook sign-in |
+| GET | `/sso/social/:provider/callback` | The provider's callback |
+
+**Sign-in, account and password**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/sso/api/login-context` | The application, organization, policies and social providers behind a sign-in request |
+| POST | `/sso/api/login` | `{ loginId, password }` plus the authorize parameters; returns tokens, or the second-factor step |
+| POST | `/sso/api/login/mfa` | A TOTP code, or a recovery code |
+| POST | `/sso/api/login/enroll/start`, `/sso/api/login/enroll/confirm` | Enrollment when the organization requires a factor |
+| POST | `/sso/api/register` | Self-registration, where the organization allows it |
+| POST | `/sso/api/password/forgot`, `/sso/api/password/reset` | Request and complete a password reset |
+| GET | `/sso/api/session` | The current platform session |
+| POST | `/sso/api/logout` | Ends the platform session |
+| GET | `/sso/api/account` | Profile, linked providers and active sessions |
+| POST | `/sso/api/account/password` | Changes the password (revokes every session) |
+| POST | `/sso/api/account/mfa/start`, `/confirm`, `/recovery-codes`, `/disable` | Two-step verification |
+| POST | `/sso/api/account/sessions/:id/revoke` | Ends one session |
+| POST | `/sso/api/account/social/:provider/unlink` | Unlinks a provider |
+
+**Administration** (bearer token of an `admin` or `tenant_admin`)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/admin/me` | The signed-in administrator and their organization |
+| GET | `/api/admin/meta` | Roles, departments, token and password limits, social providers, scopes |
+| GET | `/api/admin/overview` | Dashboard counts, including failed sign-ins |
+| GET, POST, PATCH | `/api/admin/tenants`, `/api/admin/tenants/:id` | List, create and edit organizations and their policies |
+| GET, POST, PATCH | `/api/admin/apps`, `/api/admin/apps/:id` | List, register and edit client applications |
+| POST | `/api/admin/apps/:id/secret` | Rotates a client secret |
+| GET, POST, PATCH | `/api/admin/users`, `/api/admin/users/:id` | List, create and edit users |
+| POST | `/api/admin/users/:id/reset-link` | Issues a password-reset link |
+| GET | `/api/admin/password-resets` | Pending reset requests |
+| GET | `/api/admin/audit` | Audit events with a failure summary. Query: `type`, `outcome`, `limit`, `tenantId` |
+
+**Sample applications**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/apps/chat/login`, `/apps/library/login` | Starts the flow at the application |
+| GET | `/apps/chat/callback`, `/apps/library/callback` | The application's callback, where the code is exchanged |
+| GET | `/apps/chat/api/session`, `/apps/library/api/session` | The session of the signed-in application user |
+| GET | `/apps/library/api/loans` | Loans of the signed-in library user |
+| POST | `/apps/library/api/loans/:id/renew` | Renews a loan |
+| POST | `/apps/chat/logout`, `/apps/library/logout` | Application sign-out |
 
 ---
 
@@ -1161,6 +1301,39 @@ Open three PowerShell windows, save the client example from section 17 with diff
 | `RATE_LIMITED` | n/a | Sending too fast. The reply includes `retryAfterMs` |
 | `INACTIVE` | 403 | Your account is not active |
 
+### Single sign-on errors
+
+| Code | HTTP | Meaning |
+|------|------|---------|
+| `NO_SESSION` | 401 | No platform session; sign in first |
+| `MFA_REQUIRED` | 401 | The account has a second factor; send the code to `/sso/api/login/mfa` |
+| `MFA_ENROLL_REQUIRED` | 401 | The organization requires a second factor; enroll first |
+| `MFA_CODE_INVALID` | 400 | The TOTP code or recovery code did not match |
+| `MFA_NOT_ENABLED` / `MFA_NOT_STARTED` | 400 | No second factor is enabled, or enrollment was not started |
+| `REGISTRATION_DISABLED` | 403 | The organization does not allow self-registration |
+| `INVALID_RESET_TOKEN` | 400 | The password-reset link is unknown, already used or expired |
+| `INVALID_TICKET` | 400 | The short-lived ticket between sign-in steps expired |
+| `INVALID_PKCE` | 400 | The PKCE verifier is missing or does not match the challenge |
+| `BAD_REDIRECT_URI` | 400 | The callback does not match the one registered for the application |
+| `UNKNOWN_CLIENT` / `INVALID_CLIENT` | 400, 401 | Unknown client, or a wrong client secret |
+| `BAD_APP` / `APP_DISABLED` | 400, 403 | The application is malformed or has been disabled |
+| `INVALID_GRANT` | 400 | The authorization code or refresh token cannot be used: expired, already redeemed or replayed |
+| `INVALID_STATE` | 400 | The `state` the application sent back does not match |
+| `UNSUPPORTED_RESPONSE_TYPE` / `UNSUPPORTED_GRANT` | 400 | The requested flow is not supported |
+| `TENANT_NOT_FOUND` / `TENANT_SUSPENDED` | 404, 403 | The organization is unknown or suspended |
+| `WRONG_TENANT` / `CROSS_TENANT` / `TENANT_FORBIDDEN` | 403 | The account or data belongs to another organization |
+| `TENANT_EXISTS` | 409 | An organization with that slug already exists |
+| `SESSION_NOT_FOUND` | 404 | The session to revoke does not exist |
+| `SOCIAL_ALREADY_LINKED` / `SOCIAL_ACCOUNT_NOT_LINKED` | 409, 403 | The provider account is linked elsewhere, or nothing is linked |
+| `PROVIDER_NOT_CONFIGURED` / `PROVIDER_DISABLED` | 503, 403 | The provider has no credentials, or is switched off for the organization |
+| `PROVIDER_ERROR` | 502 | The provider refused the sign-in |
+| `UNKNOWN_PROVIDER` | 404 | No such social provider |
+| `TOKEN_EXPIRED` | 401 | The access token has expired |
+| `BAD_ORIGIN` | 403 | The request came from an origin the platform does not accept |
+| `SCOPE_FORBIDDEN` | 403 | The application asked for a scope it is not registered for |
+| `APP_NOT_FOUND` / `APP_EXISTS` | 404, 409 | Application not found, or a client id already in use |
+| `LOAN_NOT_FOUND` / `LOAN_FORBIDDEN` / `LOAN_OVERDUE` / `LOAN_RETURNED` / `RENEWAL_LIMIT` | 404, 403, 400 | Library portal loan errors |
+
 ---
 
 ## 20. Data Storage
@@ -1171,13 +1344,29 @@ If `db.json` is ever corrupted, the server copies it to `db.json.corrupt-<timest
 
 ### Collections
 
+**Chat application**
+
 | Collection | Fields |
 |------------|--------|
-| `users` | `id`, `loginId`, `name`, `role`, `department`, `passwordHash`, `active`, `createdAt`, `lastLoginAt` |
-| `groups` | `id`, `name`, `type`, `postPolicy`, `description`, `createdBy`, `createdAt`, `updatedAt` |
+| `users` | `id`, `tenantId`, `loginId`, `name`, `role`, `department`, `email`, `passwordHash`, `active`, `createdAt`, `lastLoginAt`, plus `mfa` (second factor) and `socialLinks` |
+| `groups` | `id`, `tenantId`, `name`, `type`, `postPolicy`, `description`, `createdBy`, `createdAt`, `updatedAt` |
 | `memberships` | `groupId`, `userId`, `groupRole` (owner or member), `muted`, `joinedAt` |
 | `messages` | `id`, `groupId`, `senderId`, `senderName`, `senderRole`, `text`, `createdAt` |
 | `directMessages` | `id`, `fromId`, `toId`, `senderName`, `text`, `createdAt` |
+
+**Single sign-on platform**
+
+| Collection | Holds |
+|------------|-------|
+| `tenants` | Organizations: name, slug, status and their security policy (second factor, self-registration, password rules, token lifetimes, social providers) |
+| `clientApps` | Registered applications: client id, hashed client secret, organization, redirect URIs, post-logout redirect URIs and scopes |
+| `authCodes` | Single-use authorization codes with their PKCE challenge, redirect URI and expiry |
+| `refreshTokens` | Refresh tokens (hashed) with their token family and rotation state |
+| `sessions` | Platform sessions: the account, the organization, the browser and when it was last seen |
+| `auditLogs` | Authentication and administration events with their outcome, actor, organization and request details |
+| `passwordResets` | Single-use password-reset tokens and whether they have been used |
+| `appSessions` | The sample applications' own sessions, separate from the platform session |
+| `libraryLoans` | The library portal's data: item, author, due date, renewals, return date |
 
 Anyone who clones the repository runs `npm run seed` to create their own database.
 
@@ -1189,9 +1378,9 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 - The user's **role and active status are read from the database on every request and every socket event**, not trusted from the token. Demoting or deactivating a user takes effect immediately.
 - Failed logins are limited per IP and login ID. Login errors are deliberately generic, and a dummy hash comparison keeps timing similar when a login ID does not exist.
 - Message text is stored exactly as typed (trimmed). The bundled web client renders all text with `textContent`, so messages cannot inject markup. Any other front end that displays messages must escape them to prevent cross-site scripting.
-- The web client keeps its token in `sessionStorage`, so it disappears when the tab closes. Tokens expire after `JWT_EXPIRES_IN`, and an expired session sends the user back to the sign-in page.
+- The web client keeps its access token in `sessionStorage`, so it disappears when the tab closes. Access tokens are short-lived (60 to 3600 seconds, configured per organization), a refresh rotates the token, and an expired session sends the user back to the sign-in page. The platform session itself is an HTTP-only cookie.
 - The browser never decides what is allowed. The checks that hide or lock controls are a convenience, and the server repeats every check.
-- `JWT_SECRET` must be set to a long random value outside of local development. Never commit your `.env` file (it is in `.gitignore`).
+- Tokens are signed RS256 with a key pair that is generated on first start (`server/data/keys.json`, gitignored); set `SSO_PRIVATE_KEY_PEM` to use your own key, and serve the platform over HTTPS. Never commit your `.env` file (it is in `.gitignore`).
 - The demo accounts share one published password. Remove them, or change their passwords, before any real use.
 - For a public deployment, set `CLIENT_ORIGIN` to your real front-end origin(s) instead of `*`, and serve over HTTPS.
 
@@ -1210,7 +1399,8 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 | Demo says it cannot reach the server | Start it with `npm start` in another window, and check `BASE_URL` if you changed the port |
 | Demo says "Login failed ... Did you run npm run seed?" | The database is empty. Run `npm run seed -- --force`, then restart the server |
 | Demo says a group was not found | The seed data was changed. Run `npm run seed -- --force` and restart the server |
-| `[config] JWT_SECRET is not set` warning | Create `.env` with `Copy-Item .env.example .env` and set a real secret |
+| "Continue with Google" or "Continue with Facebook" stays disabled | The provider has no credentials yet, or it is switched off for the organization. Add the keys (see [Credentials for Google and Facebook](docs/SSO-SETUP.md)) and enable the provider in the admin console |
+| Sign-in fails with `BAD_REDIRECT_URI` after the address changed | The callback registered for the application no longer matches `PUBLIC_BASE_URL`. The three bundled applications are re-pointed on start-up, so restart the server; register the new callback for any application you added yourself |
 | Changes to `.env` have no effect | Restart the server, since `.env` is read only at startup |
 | Data seems stale after running `npm run seed -- --force` while the server is running | The running server holds the old data in memory. Stop the server, seed, then start it again |
 | `The database already contains users, so nothing was changed` | This is the normal safety check. Use `--force` to wipe and reseed |
@@ -1234,6 +1424,9 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 | 5 | Frontend Foundation and Login | Static file serving, shared styles, session and API helpers, sign-in page with demo accounts |
 | 6 | Chat Client | Group and direct chat, locked message bar for read-only groups, members panel, group creation, direct message dialog, unread counts, typing, presence, reconnect sync |
 | 7 | Admin Console | User management and full group management for admins |
+| 8 | Single Sign-On Provider | OAuth 2.0 / OpenID Connect: discovery document, JWKS with RS256, authorization code flow with PKCE, access, ID and refresh tokens, sessions and revocation |
+| 9 | Multi-Tenancy, MFA and Social Sign-In | Organizations with their own data and policies, TOTP second factor with recovery codes, Google and Facebook sign-in, password policy and reset, audit log |
+| 10 | Sample Applications and Documentation | The chat and library applications moved onto the platform, with the landing, sign-in, account and reset pages; SSO screenshots, `docs/SSO-SETUP.md` and this section |
 
 **Later changes**
 
@@ -1241,6 +1434,9 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 - Tightened the student direct message rule so only open groups count as a shared group. Sharing a read-only notice group no longer lets two students message each other.
 - Stopped tracking the temporary database files in Git.
 - Added this README with screenshots and a browser walkthrough.
+- Merged the chat application and the single sign-on platform into one server: the chat now signs its users in through the platform, so `/` is the platform landing page and the chat entry point is `/apps/chat/login`.
+- Pointed the three bundled applications at the current `PUBLIC_BASE_URL` on start-up, so a changed deployment address no longer breaks their registered callbacks.
+- Documented the single sign-on platform, its endpoints, its environment variables and its screenshots in this README.
 
 ---
 
@@ -1252,9 +1448,10 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 - Running more than one server instance would require a shared database and the Socket.IO Redis adapter.
 - Presence and rate-limit state are held in memory and reset when the server restarts. The rate limit is per socket, so reconnecting resets the budget.
 - Only text messages are supported. There are no file attachments, reactions, edits or deletions.
-- There is no self-service registration or password reset. Accounts are created by admins, and users cannot change their own password.
+- A password reset has no mail provider behind it: the single-use link is printed to the server console, and an administrator can issue one from the admin console. Self-registration is off until an organization switches it on.
+- The chat client keeps its tokens in `sessionStorage`, so a user signs in again in every new tab. The platform session itself is a cookie, so the SSO pages remember you.
+- The platform does not federate with external identity providers: Google and Facebook are the only social options, and there is no SAML or LDAP support.
 - The web client has no read receipts, sound or desktop notifications.
-- Because sessions live in `sessionStorage`, a user has to sign in again in every new tab.
 
 **Ideas for extension**
 

@@ -143,8 +143,9 @@ are in `.env`. Nothing else in the project needs credentials.
 A deployment that runs from `docker-compose.base44.yml` does not read a `.env`
 file: the same four variables are stored as app secrets and delivered to the
 running server at `/run/base44/app.env`, which the `web` service mounts as its
-last `env_file` so a value set in the dashboard always wins (`JWT_SECRET` is
-handled the same way). Nothing is committed and no rebuild is needed — the
+last `env_file` so a value set in the dashboard always wins (no other secret is needed: the token-signing
+key pair is generated on first start and kept in `server/data/keys.json`).
+Nothing is committed and no rebuild is needed — the
 service is recreated when a credential changes.
 
 Register the redirect URI **this** deployment sends, not the localhost one.
@@ -209,3 +210,61 @@ examples of that flow (one for a browser SPA, one for a server-rendered app).
   provider before using this for real.
 * Serve it over HTTPS in any real deployment: set `PUBLIC_BASE_URL` to the
   `https://` address, which also marks the session cookies as `Secure`.
+
+## 7. Screenshots
+
+The images below come from the running platform with the seeded demo data; the
+README shows the same ones in its
+[Single sign-on platform](../README.md#4-single-sign-on-platform) section.
+Every demo account uses the password `Comsats@123`.
+
+### The landing page
+
+Either application is opened from here, and the page also lists the demo
+accounts and the platform endpoints.
+
+![SSO platform landing page](screenshots/sso-01-landing.png)
+
+### The central sign-in page
+
+An application sends the browser here, and the page names the application and
+the scopes it is asking for. Every demo account is one click.
+
+![Central sign-in page for the chat application](screenshots/sso-02-signin.png)
+
+### Second-factor enrollment
+
+The Lahore organization requires a second factor, so its users see the
+enrollment step: the shared secret, the `otpauth://` link for an authenticator
+application and, after confirming a code, their recovery codes.
+
+![Second-factor enrollment step](screenshots/sso-03-mfa.png)
+
+### The account page
+
+Profile, two-step verification, password change, linked sign-in providers and
+every active session.
+
+![The account page](screenshots/sso-04-account.png)
+
+### The admin console
+
+Users, organizations, applications and the audit log.
+
+![Admin console, users tab](screenshots/sso-05-admin-users.png)
+
+![Admin console, organizations tab](screenshots/sso-06-admin-organizations.png)
+
+![Admin console, applications tab](screenshots/sso-07-admin-applications.png)
+
+![Admin console, audit log tab](screenshots/sso-08-admin-audit.png)
+
+### The library portal (sample application 2)
+
+Reached through single sign-on: students see only their own loans, staff see the
+whole campus and can renew an item on a student's behalf.
+
+![Library portal](screenshots/sso-09-library.png)
+
+Sample application 1, the chat, has its own annotated screenshots in the
+[README](../README.md#3-screenshots).
