@@ -138,6 +138,29 @@ are in `.env`. Nothing else in the project needs credentials.
   **Applications** tab shows the same information with the platform's own
   callbacks.
 
+### Providing the credentials in the hosted/preview deployment
+
+A deployment that runs from `docker-compose.base44.yml` does not read a `.env`
+file: the same four variables are stored as app secrets and delivered to the
+running server at `/run/base44/app.env`, which the `web` service mounts as its
+last `env_file` so a value set in the dashboard always wins (`JWT_SECRET` is
+handled the same way). Nothing is committed and no rebuild is needed — the
+service is recreated when a credential changes.
+
+Register the redirect URI **this** deployment sends, not the localhost one.
+`GET /api/meta` reports it as `socialProviders[].redirectUri`; behind the
+preview proxy it is
+
+```
+https://3000-<BASE44_PUBLIC_HOST_SUFFIX>/sso/social/google/callback
+https://3000-<BASE44_PUBLIC_HOST_SUFFIX>/sso/social/facebook/callback
+```
+
+Finally switch the provider on for the organization the user signs in to
+(admin console → **Organizations → Edit → Google / Facebook**); the tenant
+default in `server/config/policies.js` is off, so a configured key alone leaves
+the button disabled.
+
 ## 4. How the requirements map to the code
 
 | Requirement | Where |
