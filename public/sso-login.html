@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in - COMSATS Single Sign-On</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/sso.css">
+</head>
+<body class="login-page">
+
+  <section class="login-intro">
+    <div>
+      <h1>COMSATS Single Sign-On</h1>
+      <p class="lede" id="intro-text">Sign in once and use every application registered with the platform.</p>
+    </div>
+
+    <div id="request-box" hidden>
+      <p class="tenant-badge" id="tenant-badge"></p>
+      <p><strong id="app-name"></strong> is asking to sign you in.</p>
+      <ul class="scope-list" id="scope-list"></ul>
+    </div>
+
+    <ul class="boundary-list">
+      <li>
+        <strong>One account, many applications</strong>
+        Your password is only ever typed here, and never shared with the applications.
+      </li>
+      <li>
+        <strong>Organizations are separated</strong>
+        Each organization has its own users, applications, policies and audit trail.
+      </li>
+      <li>
+        <strong>Tokens are short-lived</strong>
+        Applications hold a token that expires quickly; the platform rotates the refresh token.
+      </li>
+    </ul>
+  </section>
+
+  <main class="login-panel">
+    <div id="form-error" class="form-error" role="alert" hidden></div>
+
+    <!-- Step 1: password -->
+    <section id="step-signin">
+      <h2>Sign in</h2>
+      <p class="sub">Students use their registration number. Staff use their username.</p>
+
+      <form id="signin-form" novalidate>
+        <div class="field">
+          <label for="loginId">Login ID</label>
+          <input class="input" id="loginId" name="loginId" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn" id="signin-button" type="submit">Sign in</button>
+      </form>
+
+      <div class="social-row" id="social-row"></div>
+      <p class="social-note" id="social-note" hidden></p>
+
+      <p class="sub" style="margin-top:14px">
+        <button type="button" class="link-btn" id="register-toggle">Create an account</button>
+        &middot;
+        <button type="button" class="link-btn" id="forgot-toggle">Forgot your password?</button>
+      </p>
+
+      <div class="demo" id="demo-box" hidden>
+        <p class="sub">Demo accounts (password <strong>Comsats@123</strong>)</p>
+        <div class="demo-list" id="demo-list"></div>
+      </div>
+    </section>
+
+    <!-- Step 2: second factor -->
+    <section id="step-mfa" hidden>
+      <h2>Two-step verification</h2>
+      <p class="sub">Enter the current code from your authenticator application.</p>
+      <form id="mfa-form" novalidate>
+        <div class="field">
+          <label for="mfa-code">6-digit code</label>
+          <input class="input code-input" id="mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+        </div>
+        <button class="btn" id="mfa-button" type="submit">Verify</button>
+        <button type="button" class="btn btn-quiet" id="mfa-recovery-toggle">Use a recovery code</button>
+      </form>
+      <form id="recovery-form" hidden novalidate>
+        <div class="field">
+          <label for="recovery-code">Recovery code</label>
+          <input class="input" id="recovery-code" placeholder="XXXX-XXXX" autocomplete="off">
+        </div>
+        <button class="btn" id="recovery-button" type="submit">Use recovery code</button>
+      </form>
+    </section>
+
+    <!-- Step 3: enrollment, when the organization requires a second factor -->
+    <section id="step-enroll" hidden>
+      <h2>Set up two-step verification</h2>
+      <p class="sub" id="enroll-reason"></p>
+      <p class="sub">
+        Add the secret below to your authenticator application (Google Authenticator, Authy,
+        Microsoft Authenticator) or open the <code>otpauth://</code> link, then enter one code.
+      </p>
+      <div class="secret-box">
+        <code id="enroll-secret">...</code>
+        <button type="button" class="btn btn-quiet btn-small" id="copy-secret">Copy secret</button>
+        <a class="btn btn-quiet btn-small" id="otpauth-link" href="#">Open link</a>
+      </div>
+      <p class="otpauth" id="enroll-uri"></p>
+      <form id="enroll-form" novalidate>
+        <div class="field">
+          <label for="enroll-code">Code from the application</label>
+          <input class="input code-input" id="enroll-code" inputmode="numeric" maxlength="6">
+        </div>
+        <button class="btn" id="enroll-button" type="submit">Turn on two-step verification</button>
+      </form>
+    </section>
+
+    <!-- Recovery codes, shown once -->
+    <section id="step-codes" hidden>
+      <h2>Save your recovery codes</h2>
+      <p class="sub">Each code works once, if you lose access to your authenticator application.</p>
+      <div class="recovery-codes" id="codes-box"></div>
+      <button type="button" class="btn" id="codes-continue">I saved them, continue</button>
+    </section>
+
+    <!-- Registration -->
+    <section id="step-register" hidden>
+      <h2>Create an account</h2>
+      <p class="sub" id="register-hint"></p>
+      <form id="register-form" novalidate>
+        <div class="field">
+          <label for="reg-name">Full name</label>
+          <input class="input" id="reg-name" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="reg-login">Registration number</label>
+          <input class="input" id="reg-login" placeholder="FA22-BCS-045" autocomplete="off" required>
+        </div>
+        <div class="field">
+          <label for="reg-email">E-mail (optional)</label>
+          <input class="input" id="reg-email" type="email" autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="reg-dept">Department</label>
+          <select class="input" id="reg-dept"></select>
+        </div>
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <input class="input" id="reg-password" type="password" autocomplete="new-password" required>
+        </div>
+        <p class="hint" id="reg-policy"></p>
+        <button class="btn" id="register-button" type="submit">Create account and continue</button>
+        <button type="button" class="btn btn-quiet" id="register-cancel">Back to sign in</button>
+      </form>
+    </section>
+
+    <!-- Forgot password -->
+    <section id="step-forgot" hidden>
+      <h2>Reset your password</h2>
+      <p class="sub">
+        Enter your login ID. This deployment has no mail provider, so the reset link is written to
+        the server console and can also be generated by an administrator in the admin console.
+      </p>
+      <form id="forgot-form" novalidate>
+        <div class="field">
+          <label for="forgot-login">Login ID</label>
+          <input class="input" id="forgot-login" autocomplete="username">
+        </div>
+        <button class="btn" id="forgot-button" type="submit">Request a reset link</button>
+        <button type="button" class="btn btn-quiet" id="forgot-cancel">Back to sign in</button>
+      </form>
+    </section>
+
+    <!-- Already signed in -->
+    <section id="step-continue" hidden>
+      <h2>You are already signed in</h2>
+      <p class="sub" id="continue-text"></p>
+      <button type="button" class="btn" id="continue-button">Continue</button>
+      <button type="button" class="btn btn-quiet" id="switch-button">Use another account</button>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/sso-login.js"></script>
+</body>
+</html>

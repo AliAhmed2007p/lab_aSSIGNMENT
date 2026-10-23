@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMSATS Connect</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body class="chat-body">
+  <div class="app" id="app">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="side-top">
+        <div class="brand">COMSATS Connect</div>
+        <div class="me" id="me-card"></div>
+        <div class="conn connecting" id="conn-status" role="status">
+          <span class="dot"></span><span id="conn-text">Connecting...</span>
+        </div>
+      </div>
+
+      <div class="side-scroll">
+        <div class="side-head">
+          <h2>Groups</h2>
+          <button type="button" class="icon-btn" id="new-group-btn" title="Create a group" aria-label="Create a group"></button>
+        </div>
+        <nav id="group-list" aria-label="Groups"></nav>
+
+        <div class="side-head">
+          <h2>Direct messages</h2>
+          <button type="button" class="icon-btn" id="new-dm-btn" title="New direct message" aria-label="New direct message"></button>
+        </div>
+        <nav id="dm-list" aria-label="Direct messages"></nav>
+      </div>
+    </aside>
+
+    <div class="scrim" id="scrim"></div>
+
+    <main class="main">
+      <header class="chat-head">
+        <button type="button" class="icon-btn only-mobile" id="menu-btn" aria-label="Open chat list"></button>
+        <div class="chat-title">
+          <h1 id="chat-title">COMSATS Connect</h1>
+          <div class="chat-sub" id="chat-sub"></div>
+        </div>
+        <div class="chat-actions" id="chat-actions"></div>
+      </header>
+
+      <div class="messages" id="messages" role="log" aria-live="polite"></div>
+      <div class="typing" id="typing" aria-live="polite"></div>
+      <footer class="composer-wrap" id="composer-wrap" hidden></footer>
+    </main>
+
+    <aside class="panel" id="panel" hidden></aside>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/chat-panels.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>

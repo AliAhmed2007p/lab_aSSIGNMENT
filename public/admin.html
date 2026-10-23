@@ -1,0 +1,208 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin console - COMSATS Connect</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="admin-body">
+
+  <header class="admin-top">
+    <div class="admin-brand">
+      <h1>Admin console</h1>
+      <span id="admin-me"></span>
+    </div>
+    <div class="admin-links">
+      <a class="btn btn-quiet btn-small" href="/chat.html">Back to chat</a>
+      <button type="button" class="btn btn-quiet btn-small" id="signout-btn">Sign out</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab active" id="tab-users" aria-selected="true" aria-controls="view-users">Users</button>
+      <button type="button" role="tab" class="tab" id="tab-groups" aria-selected="false" aria-controls="view-groups">Groups</button>
+      <button type="button" role="tab" class="tab" id="tab-orgs" aria-selected="false" aria-controls="view-orgs">Organizations</button>
+      <button type="button" role="tab" class="tab" id="tab-apps" aria-selected="false" aria-controls="view-apps">Applications</button>
+      <button type="button" role="tab" class="tab" id="tab-audit" aria-selected="false" aria-controls="view-audit">Audit log</button>
+    </div>
+
+    <section id="view-users" role="tabpanel" aria-labelledby="tab-users">
+      <div class="toolbar">
+        <input class="input" id="user-search" type="search" placeholder="Search by name or login ID" aria-label="Search users" autocomplete="off">
+        <select class="input" id="user-role" aria-label="Filter by role">
+          <option value="">All roles</option>
+          <option value="student">Students</option>
+          <option value="faculty">Faculty</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select class="input" id="user-dept" aria-label="Filter by department">
+          <option value="">All departments</option>
+        </select>
+        <label class="check"><input type="checkbox" id="user-inactive" checked> Show deactivated</label>
+        <button type="button" class="btn toolbar-end" id="add-user-btn">Add user</button>
+      </div>
+      <p class="count" id="user-count"></p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Role</th>
+              <th scope="col">Department</th>
+              <th scope="col">Status</th>
+              <th scope="col">Last sign-in</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="user-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-groups" role="tabpanel" aria-labelledby="tab-groups" hidden>
+      <div class="toolbar">
+        <input class="input" id="group-search" type="search" placeholder="Search groups" aria-label="Search groups" autocomplete="off">
+        <select class="input" id="group-type" aria-label="Filter by type">
+          <option value="">All types</option>
+        </select>
+        <select class="input" id="group-policy" aria-label="Filter by posting policy">
+          <option value="">All posting policies</option>
+        </select>
+        <button type="button" class="btn toolbar-end" id="add-group-btn">Create group</button>
+      </div>
+      <p class="count" id="group-count"></p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Group</th>
+              <th scope="col">Type</th>
+              <th scope="col">Who can post</th>
+              <th scope="col">Members</th>
+              <th scope="col">Created</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="group-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-orgs" role="tabpanel" aria-labelledby="tab-orgs" hidden>
+      <div class="card">
+        <h3>Organizations</h3>
+        <p class="sub">
+          Each organization keeps its own users, applications, policies and audit trail.
+          A tenant administrator only sees their own organization.
+        </p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Slug</th>
+                <th scope="col">State</th>
+                <th scope="col">MFA</th>
+                <th scope="col">Users</th>
+                <th scope="col">Apps</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="org-body"></tbody>
+          </table>
+        </div>
+        <div id="org-editor" hidden style="margin-top:16px"></div>
+      </div>
+    </section>
+
+    <section id="view-apps" role="tabpanel" aria-labelledby="tab-apps" hidden>
+      <div class="card">
+        <h3>Registered applications</h3>
+        <p class="sub">
+          An application belongs to one organization and may only use the redirect URIs
+          registered here. The client secret is shown once, when it is created or rotated.
+        </p>
+        <div class="toolbar">
+          <button type="button" class="btn toolbar-end" id="new-app-btn">Register application</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Application</th>
+                <th scope="col">Organization</th>
+                <th scope="col">Client ID</th>
+                <th scope="col">Redirect URIs</th>
+                <th scope="col">Scopes</th>
+                <th scope="col">State</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="app-body"></tbody>
+          </table>
+        </div>
+        <div id="app-editor" hidden style="margin-top:16px"></div>
+        <p class="hint" id="app-secret" hidden></p>
+      </div>
+    </section>
+
+    <section id="view-audit" role="tabpanel" aria-labelledby="tab-audit" hidden>
+      <div class="lib-cards" style="margin-bottom:14px">
+        <div class="stat"><b id="audit-total">0</b><span>events in 24 hours</span></div>
+        <div class="stat"><b id="audit-failed">0</b><span>failed attempts in 24 hours</span></div>
+        <div class="stat"><b id="audit-sessions">0</b><span>active sessions</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Failed sign-ins</h3>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Account</th>
+                <th scope="col">Failures</th>
+                <th scope="col">Last attempt</th>
+              </tr>
+            </thead>
+            <tbody id="audit-failed-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h3>Authentication events</h3>
+        <div class="toolbar">
+          <select class="input" id="audit-outcome" aria-label="Filter by outcome">
+            <option value="">All outcomes</option>
+            <option value="success">Successful</option>
+            <option value="failure">Failed</option>
+          </select>
+          <input class="input" id="audit-type" placeholder="Event type, e.g. login.password">
+          <button type="button" class="btn toolbar-end" id="audit-refresh">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Event</th>
+                <th scope="col">Account</th>
+                <th scope="col">Application</th>
+                <th scope="col">Detail</th>
+              </tr>
+            </thead>
+            <tbody id="audit-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/admin-sso.js"></script>
+</body>
+</html>

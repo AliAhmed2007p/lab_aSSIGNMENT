@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMSATS SSO platform</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/sso.css">
+</head>
+<body class="landing-body">
+
+  <header class="landing-top">
+    <div class="landing-brand">
+      <h1>COMSATS Single Sign-On</h1>
+      <span>One identity for every campus application</span>
+    </div>
+    <nav class="landing-links">
+      <a class="btn btn-quiet btn-small" href="/.well-known/openid-configuration">Discovery document</a>
+      <a class="btn btn-quiet btn-small" href="/sso/jwks.json">Public keys</a>
+      <a class="btn btn-quiet btn-small" href="/admin.html">Admin console</a>
+    </nav>
+  </header>
+
+  <main class="landing-main">
+    <section class="landing-hero">
+      <h2>Sign in once, use both applications</h2>
+      <p>
+        The platform below is the central identity provider. It holds the user directory, the
+        organizations, the security policies and the tokens. The two applications ask it who you
+        are - they never see or store your password.
+      </p>
+      <ol class="landing-steps">
+        <li>Pick an application; it sends you to the central sign-in page.</li>
+        <li>Sign in with your registration number or staff username (add a second factor if your organization requires it).</li>
+        <li>Open the second application - you are already signed in, no credentials asked again.</li>
+      </ol>
+    </section>
+
+    <section class="app-cards">
+      <article class="app-card">
+        <h3>COMSATS Connect</h3>
+        <p class="app-kind">Sample application 1 &middot; chat and groups</p>
+        <p>
+          Class, course, department and society groups with posting rules, muting, presence and
+          direct messages. Protected REST and Socket.IO API.
+        </p>
+        <p class="app-meta">Scopes: <code>openid profile email chat:read chat:write</code></p>
+        <a class="btn" href="/apps/chat/login">Sign in with SSO</a>
+        <a class="btn btn-quiet" id="chat-direct" href="/chat.html">Open the chat</a>
+      </article>
+
+      <article class="app-card">
+        <h3>Library portal</h3>
+        <p class="app-kind">Sample application 2 &middot; loans and renewals</p>
+        <p>
+          Borrowed items and due dates. Students only ever see their own loans; staff see the
+          whole campus and can renew on behalf of a student.
+        </p>
+        <p class="app-meta">Scopes: <code>openid profile email library:read library:write</code></p>
+        <a class="btn" href="/apps/library/login">Sign in with SSO</a>
+        <a class="btn btn-quiet" href="/apps/library/">Open the portal</a>
+      </article>
+    </section>
+
+    <section class="panel-block">
+      <h3>Demo accounts</h3>
+      <p class="hint">
+        Every demo account uses the password <strong>Comsats@123</strong>. The Lahore
+        organization requires a second factor, so signing in with one of its accounts shows the
+        enrollment step.
+      </p>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Organization</th>
+              <th scope="col">Login ID</th>
+              <th scope="col">Role</th>
+              <th scope="col">Name</th>
+            </tr>
+          </thead>
+          <tbody id="account-rows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel-block">
+      <h3>Platform endpoints</h3>
+      <div class="table-wrap">
+        <table class="table">
+          <tbody>
+            <tr><th scope="row">Authorization</th><td><code>/sso/authorize</code></td></tr>
+            <tr><th scope="row">Token</th><td><code>/sso/token</code></td></tr>
+            <tr><th scope="row">User info</th><td><code>/sso/userinfo</code></td></tr>
+            <tr><th scope="row">Revocation</th><td><code>/sso/revoke</code></td></tr>
+            <tr><th scope="row">Single sign-out</th><td><code>/sso/end-session</code></td></tr>
+            <tr><th scope="row">Account</th><td><a href="/sso/account">/sso/account</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/landing.js"></script>
+</body>
+</html>
