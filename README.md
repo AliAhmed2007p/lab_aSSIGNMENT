@@ -12,28 +12,29 @@
 1. [Overview](#1-overview)
 2. [Features](#2-features)
 3. [Screenshots](#3-screenshots)
-4. [Tech Stack](#4-tech-stack)
-5. [How This Meets the Assignment](#5-how-this-meets-the-assignment)
-6. [Roles and Communication Rules](#6-roles-and-communication-rules)
-7. [Architecture](#7-architecture)
-8. [Web Interface](#8-web-interface)
-9. [Project Structure](#9-project-structure)
-10. [Getting Started](#10-getting-started)
-11. [Environment Variables](#11-environment-variables)
-12. [Demo Accounts and Seed Data](#12-demo-accounts-and-seed-data)
-13. [Demo Walkthrough in the Browser](#13-demo-walkthrough-in-the-browser)
-14. [Running the Automated Demo](#14-running-the-automated-demo)
-15. [REST API Reference](#15-rest-api-reference)
-16. [Socket.IO Reference](#16-socketio-reference)
-17. [Manual Testing Guide](#17-manual-testing-guide)
-18. [Error Codes](#18-error-codes)
-19. [Data Storage](#19-data-storage)
-20. [Security Notes](#20-security-notes)
-21. [Troubleshooting](#21-troubleshooting)
-22. [Phase Build History](#22-phase-build-history)
-23. [Limitations and Future Work](#23-limitations-and-future-work)
-24. [Contributing](#24-contributing)
-25. [License](#25-license)
+4. [Single sign-on platform](#5-single-sign-on-platform)
+5. [Tech Stack](#5-tech-stack)
+6. [How This Meets the Assignment](#6-how-this-meets-the-assignment)
+7. [Roles and Communication Rules](#7-roles-and-communication-rules)
+8. [Architecture](#8-architecture)
+9. [Web Interface](#9-web-interface)
+10. [Project Structure](#10-project-structure)
+11. [Getting Started](#11-getting-started)
+12. [Environment Variables](#12-environment-variables)
+13. [Demo Accounts and Seed Data](#13-demo-accounts-and-seed-data)
+14. [Demo Walkthrough in the Browser](#14-demo-walkthrough-in-the-browser)
+15. [Running the Automated Demo](#15-running-the-automated-demo)
+16. [REST API Reference](#16-rest-api-reference)
+17. [Socket.IO Reference](#17-socketio-reference)
+18. [Manual Testing Guide](#18-manual-testing-guide)
+19. [Error Codes](#19-error-codes)
+20. [Data Storage](#20-data-storage)
+21. [Security Notes](#21-security-notes)
+22. [Troubleshooting](#22-troubleshooting)
+23. [Phase Build History](#23-phase-build-history)
+24. [Limitations and Future Work](#24-limitations-and-future-work)
+25. [Contributing](#25-contributing)
+26. [License](#26-license)
 
 ---
 
@@ -96,7 +97,7 @@ There is also an automated demo script (`tests/demo.js`) that connects several u
 
 ## 3. Screenshots
 
-All screenshots are taken from the running application with the demo data from [Demo Accounts and Seed Data](#12-demo-accounts-and-seed-data).
+All screenshots are taken from the running application with the demo data from [Demo Accounts and Seed Data](#13-demo-accounts-and-seed-data).
 
 ### Sign in
 
@@ -186,7 +187,151 @@ Library Notices was created as an Office group with the "Admins post" policy. Th
 
 ---
 
-## 4. Tech Stack
+## 4. Single sign-on platform
+
+The repository carries a second assignment as well: a **multi-tenant single sign-on platform** built on OAuth 2.0 and OpenID Connect. The chat system described above is sample application 1; a campus library portal is sample application 2. Both sign their users in through the platform, which owns the user directory, the organizations, the security policies, the token-signing keys and the audit log.
+
+An application never sees a password. It sends the browser to the platform's authorization endpoint, receives an authorization code on its own callback, and exchanges that code (with PKCE) for an access token and an ID token. The platform keeps one session per browser, so the second application signs the user in without asking for credentials again — that is the single sign-on part.
+
+```
+browser ──▶ /apps/chat/login                 sample application 1 (chat)
+            /apps/library/login              sample application 2 (library)
+                 │
+                 ▼
+            /sso/authorize                   authorization endpoint
+                 │ no session                 │ session exists
+                 ▼                             │ (single sign-on: no credentials asked)
+            /sso/login   (password, MFA, social)
+                 │
+                 ▼
+            /sso/token  ⇄  /sso/userinfo, /sso/jwks.json
+                 │ authorization code + tokens
+                 ▼
+            /apps/chat/callback, /apps/library/callback
+```
+
+### What the platform provides
+
+| Capability | Where it lives |
+|------------|----------------|
+| OAuth 2.0 / OpenID Connect (authorization code + PKCE) | `/sso/authorize`, `/sso/token`, `server/services/ssoService.js` |
+| Discovery document and JWKS, RS256 signatures | `/.well-known/openid-configuration`, `/sso/jwks.json`, `server/security/tokens.js` |
+| Multi-tenancy with data isolation | `server/services/tenantService.js`; a tenant id on users, groups, applications, sessions and audit events |
+| Organization administration | `public/admin.html`, `public/js/admin-sso.js`, `/api/admin/*` |
+| TOTP second factor, recovery codes, policy per organization | `server/security/totp.js`, `server/services/mfaService.js` |
+| Password hashing, strength policy, lockout, reset | `server/security/passwords.js`, `server/services/userService.js` |
+| Access and refresh tokens, rotation, revocation, single sign-out | `server/services/ssoService.js` |
+| Google and Facebook sign-in, switched on per organization | `server/services/socialService.js` |
+| Audit log and failed sign-in monitoring | `server/services/auditService.js`, admin console → **Audit log** |
+
+### Organizations (tenants)
+
+Two organizations are seeded, and each one has its own security policy.
+
+| Organization | Policy | Accounts |
+|--------------|--------|----------|
+| COMSATS University Islamabad | two-factor optional | `admin.it`, `exam.cell`, `dr.ahmed`, students |
+| COMSATS University Lahore | two-factor required | `admin.lhr`, `dr.kamran`, `FA23-BCS-101`, `FA23-BCS-102` |
+
+Every user, group, application, loan and audit event carries the organization it belongs to. A user of one organization never sees the data of the other: Lahore has its own class group, its own users and its own registered application, and the chat and admin APIs are scoped to the caller's organization.
+
+### Roles
+
+| Role | Scope |
+|------|-------|
+| `admin` | Platform administrator: every organization, user, application and policy |
+| `tenant_admin` | Administers its own organization only |
+| `faculty`, `student` | Ordinary users of the chat and of the library portal |
+
+### Signing in
+
+1. An application sends the browser to `/sso/authorize` with its client id, callback, scopes and a PKCE challenge.
+2. With no platform session, the browser lands on `/sso/login`, which shows which application is asking and which scopes it wants.
+3. The user signs in with their login ID and password. If the organization requires a second factor, a TOTP step follows; a user without a factor sees the enrollment step (secret, `otpauth://` link, recovery codes).
+4. The platform redirects back to the application's callback with an authorization code, which the application exchanges at `/sso/token` for an access token, an ID token and a refresh token.
+5. Opening the second application finds the existing session and issues a code without asking for credentials again.
+
+Social sign-in (Google, Facebook) is offered on the sign-in page for the organizations where an administrator has switched the provider on; the buttons stay disabled until the matching client credentials are configured.
+
+### Tokens, sessions and sign-out
+
+- Access tokens are signed RS256 tokens with a 60–3600 second lifetime (configurable per organization); the ID token mirrors the OpenID Connect claims.
+- Refresh tokens rotate on every use, and a replayed refresh token revokes the whole family.
+- Changing or resetting a password revokes every session and refresh token for that user.
+- **Sign out everywhere** on the account page ends the platform session, and both applications then ask for credentials again. `POST /sso/revoke` and `GET /sso/end-session` are the protocol endpoints behind it.
+- Signing keys are a generated RSA-2048 pair in `server/data/keys.json` (gitignored); set `SSO_PRIVATE_KEY_PEM` to use your own.
+- There is no mail provider: a password reset prints its single-use link to the server console and records the request, so an administrator can issue a fresh link (admin console → **Users → Reset link**) instead.
+
+### Pages
+
+| URL | Who | Purpose |
+|-----|-----|---------|
+| `/` | Everyone | Landing page: what the platform is, the two applications, the demo accounts and the platform endpoints |
+| `/sso/login` | Everyone | The central sign-in page (password, second factor, enrollment, registration, password reset) |
+| `/sso/account` | Signed-in users | Profile, two-step verification, password change, linked providers, active sessions |
+| `/sso/reset` | Everyone with a reset link | Sets a new password |
+| `/chat.html`, `/apps/chat/` | Chat users | Sample application 1, reached through single sign-on |
+| `/apps/library/` | Library users | Sample application 2: borrowed items, due dates, renewals |
+| `/admin.html` | Administrators | Users, groups, organizations, applications and the audit log |
+
+The admin console has five tabs: **Users** and **Groups** manage the chat accounts and groups, **Organizations** edits each organization's policies (MFA, self-registration, password rules, token lifetime, social providers), **Applications** registers client applications and rotates their secrets, and **Audit log** lists authentication events with failed sign-in monitoring.
+
+### Screenshots
+
+The landing page, from which either application can be opened. It also lists the demo accounts and the platform endpoints.
+
+![SSO platform landing page](docs/screenshots/sso-01-landing.png)
+
+An application sends the browser to the central sign-in page, which names the application and lists the scopes it is asking for.
+
+![Central sign-in page for the chat application](docs/screenshots/sso-02-signin.png)
+
+The Lahore organization requires a second factor, so its users see the enrollment step: the shared secret, the `otpauth://` link for an authenticator app, and (after confirming a code) their recovery codes.
+
+![Second-factor enrollment step](docs/screenshots/sso-03-mfa.png)
+
+The account page: profile, two-step verification, password change, linked sign-in providers and every active session.
+
+![The account page](docs/screenshots/sso-04-account.png)
+
+The admin console **Users** tab, with the role, organization, status and last sign-in of every account.
+
+![Admin console, users tab](docs/screenshots/sso-05-admin-users.png)
+
+**Organizations** shows both tenants with their policy switches, including whether the second factor is required.
+
+![Admin console, organizations tab](docs/screenshots/sso-06-admin-organizations.png)
+
+**Applications** lists the registered client applications with their client id, redirect URIs, scopes and state.
+
+![Admin console, applications tab](docs/screenshots/sso-07-admin-applications.png)
+
+**Audit log** records every authentication event and flags repeated failures.
+
+![Admin console, audit log tab](docs/screenshots/sso-08-admin-audit.png)
+
+The library portal, sample application 2, after signing in through single sign-on. Students see only their own loans; staff see the whole campus and can renew an item on a student's behalf.
+
+![Library portal](docs/screenshots/sso-09-library.png)
+
+### The two sample applications
+
+| Application | Kind | What it shows |
+|-------------|------|---------------|
+| COMSATS Connect (`/apps/chat/`) | Browser application with a protected REST and Socket.IO API | Single sign-on, scopes, refresh tokens, a protected API |
+| Library portal (`/apps/library/`) | Server-rendered application | A second application reusing the same session, roles inside the application (student vs staff) and a resource API of its own |
+
+Registering a third application is an admin-console operation: **Applications → Register application**, then send the browser to `/sso/authorize` and exchange the code at `/sso/token`, exactly as the two bundled applications do.
+
+### Where to read more
+
+- [Single sign-on setup](docs/SSO-SETUP.md) — running it, the demo walkthrough, Google and Facebook credentials, how each requirement maps to the code, registering a third application and the security notes.
+- [REST API reference](#17-rest-api-reference) — the SSO and administration endpoints.
+- The landing page at `/` links to the discovery document, the JWKS and the admin console.
+
+---
+
+## 5. Tech Stack
 
 | Layer | Technology | Notes |
 |-------|------------|-------|
@@ -204,7 +349,7 @@ Library Notices was created as an Office group with the "Admins post" policy. Th
 
 ---
 
-## 5. How This Meets the Assignment
+## 6. How This Meets the Assignment
 
 | Assignment requirement | Where it is implemented |
 |------------------------|-------------------------|
@@ -217,7 +362,7 @@ Library Notices was created as an Office group with the "Admins post" policy. Th
 
 ---
 
-## 6. Roles and Communication Rules
+## 7. Roles and Communication Rules
 
 ### Roles
 
@@ -296,7 +441,7 @@ You cannot message yourself or a deactivated account.
 
 ---
 
-## 7. Architecture
+## 8. Architecture
 
 ```
           +-----------------------------------------------------------+
@@ -362,7 +507,7 @@ If any check fails, the sender's acknowledgement receives `{ ok: false, error: {
 
 ---
 
-## 8. Web Interface
+## 9. Web Interface
 
 The server serves the `public` folder, so the whole interface is available at **http://localhost:3000** with no build step.
 
@@ -419,7 +564,7 @@ Design notes:
 
 ---
 
-## 9. Project Structure
+## 10. Project Structure
 
 ```
 comsats-connect/
@@ -472,7 +617,7 @@ comsats-connect/
 
 ---
 
-## 10. Getting Started
+## 11. Getting Started
 
 All commands below are for **Windows PowerShell**.
 
@@ -518,7 +663,7 @@ Open `.env` and replace the `JWT_SECRET` value with a long random string of your
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-All variables are explained in [Environment Variables](#11-environment-variables). The defaults work as they are, except for the secret.
+All variables are explained in [Environment Variables](#12-environment-variables). The defaults work as they are, except for the secret.
 
 ### Step 4: Load the demo data
 
@@ -578,7 +723,7 @@ In the second window, from the project folder:
 npm run demo
 ```
 
-See [Running the Automated Demo](#14-running-the-automated-demo).
+See [Running the Automated Demo](#15-running-the-automated-demo).
 
 ### Command summary
 
@@ -593,7 +738,7 @@ See [Running the Automated Demo](#14-running-the-automated-demo).
 
 ---
 
-## 11. Environment Variables
+## 12. Environment Variables
 
 Set in `.env` (copied from `.env.example`).
 
@@ -616,7 +761,7 @@ $env:BASE_URL = 'http://localhost:4000'; npm run demo
 
 ---
 
-## 12. Demo Accounts and Seed Data
+## 13. Demo Accounts and Seed Data
 
 **Every demo account uses the password `Comsats@123`.** These accounts are for demonstration only. Change or remove them before any real use.
 
@@ -662,7 +807,7 @@ This wipes `db.json` completely and recreates the data above. If the server is r
 
 ---
 
-## 13. Demo Walkthrough in the Browser
+## 14. Demo Walkthrough in the Browser
 
 Start from a fresh seed (`npm run seed -- --force`, then `npm start`). Open several tabs of **http://localhost:3000**. Each tab keeps its own login. The screenshot numbers refer to [Screenshots](#3-screenshots).
 
@@ -688,7 +833,7 @@ Start from a fresh seed (`npm run seed -- --force`, then `npm start`). Open seve
 
 ---
 
-## 14. Running the Automated Demo
+## 15. Running the Automated Demo
 
 `tests/demo.js` is the quickest way to check every rule at once. It logs in six users, opens a Socket.IO connection for each, and runs thirteen scenarios, printing which messages were delivered and which were blocked and why. Each check prints `PASS` or `FAIL`.
 
@@ -722,7 +867,7 @@ The demo exits with code 0 when every check passes, and 1 otherwise. Set `NO_COL
 
 ---
 
-## 15. REST API Reference
+## 16. REST API Reference
 
 Base URL: `http://localhost:3000`
 All endpoints except `/api/health`, `/api/meta` and `/api/auth/login` need the header `Authorization: Bearer <token>`.
@@ -795,7 +940,7 @@ Content-Type: application/json
 
 ---
 
-## 16. Socket.IO Reference
+## 17. Socket.IO Reference
 
 ### Connecting
 
@@ -884,13 +1029,13 @@ main();
 
 ---
 
-## 17. Manual Testing Guide
+## 18. Manual Testing Guide
 
 You can test with the browser, with the demo, with PowerShell, or with Postman.
 
 ### With the browser
 
-Follow [Demo Walkthrough in the Browser](#13-demo-walkthrough-in-the-browser). It covers every boundary with two or three tabs.
+Follow [Demo Walkthrough in the Browser](#14-demo-walkthrough-in-the-browser). It covers every boundary with two or three tabs.
 
 ### With PowerShell
 
@@ -938,15 +1083,15 @@ try { Invoke-RestMethod -Uri "http://localhost:3000/api/groups/$gid/messages" -H
 
 ### With Postman
 
-REST endpoints work with a normal HTTP request and the `Authorization: Bearer <token>` header. Postman can also open a Socket.IO connection (New, then Socket.IO). Put the token in the **Auth** section of the handshake, then add listeners for the server events in section 16.
+REST endpoints work with a normal HTTP request and the `Authorization: Bearer <token>` header. Postman can also open a Socket.IO connection (New, then Socket.IO). Put the token in the **Auth** section of the handshake, then add listeners for the server events in section 17.
 
 ### Watching real-time delivery by hand
 
-Open three PowerShell windows, save the client example from section 16 with different login IDs (for example Muaaz, Ayesha and Fatima), and run them. Messages sent to the Venturify FYP Team reach Muaaz and Ayesha but never Fatima, until you add her with `POST /api/groups/:id/members`. In the browser, the same test is steps 2 and 8 of the walkthrough.
+Open three PowerShell windows, save the client example from section 17 with different login IDs (for example Muaaz, Ayesha and Fatima), and run them. Messages sent to the Venturify FYP Team reach Muaaz and Ayesha but never Fatima, until you add her with `POST /api/groups/:id/members`. In the browser, the same test is steps 2 and 8 of the walkthrough.
 
 ---
 
-## 18. Error Codes
+## 19. Error Codes
 
 ### Authentication and request errors
 
@@ -1018,7 +1163,7 @@ Open three PowerShell windows, save the client example from section 16 with diff
 
 ---
 
-## 19. Data Storage
+## 20. Data Storage
 
 All data is kept in `server/data/db.json`, created on first run. It is loaded into memory at startup, and writes are batched (about 200 ms after the last change) and saved safely through a temporary file. Pending writes are flushed when the process exits, on Ctrl+C, and when nodemon restarts the server.
 
@@ -1038,7 +1183,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 20. Security Notes
+## 21. Security Notes
 
 - Passwords are hashed with bcrypt and never returned by the API.
 - The user's **role and active status are read from the database on every request and every socket event**, not trusted from the token. Demoting or deactivating a user takes effect immediately.
@@ -1052,7 +1197,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 21. Troubleshooting
+## 22. Troubleshooting
 
 | Problem | Cause and fix |
 |---------|---------------|
@@ -1077,7 +1222,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 22. Phase Build History
+## 23. Phase Build History
 
 | Phase | Name | What was built |
 |-------|------|----------------|
@@ -1099,7 +1244,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 23. Limitations and Future Work
+## 24. Limitations and Future Work
 
 **Current limitations**
 
@@ -1124,7 +1269,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 24. Contributing
+## 25. Contributing
 
 1. Fork the repository and create a feature branch.
 2. Keep every communication rule inside `server/services/permissionService.js` so REST and Socket.IO stay consistent.
@@ -1135,7 +1280,7 @@ Anyone who clones the repository runs `npm run seed` to create their own databas
 
 ---
 
-## 25. License
+## 26. License
 
 MIT
 
